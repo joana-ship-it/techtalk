@@ -433,8 +433,10 @@ export default function CalendarView({
           onClose={() => setSelectedEvent(null)}
           brief={eventData[selectedEvent.id]?.brief ?? ''}
           easterEgg={eventData[selectedEvent.id]?.easterEgg ?? ''}
+          presentation={eventData[selectedEvent.id]?.presentation ?? ''}
           onUpdateBrief={v => updateEventData(selectedEvent.id, 'brief', v)}
           onUpdateEasterEgg={v => updateEventData(selectedEvent.id, 'easterEgg', v)}
+          onUpdatePresentation={v => updateEventData(selectedEvent.id, 'presentation', v)}
           onUpdateField={(field, value) => updateEventField(selectedEvent.id, field, value)}
           onDelete={() => { deleteEvent(selectedEvent.id); setSelectedEvent(null); }}
           tagConfig={tagConfig}

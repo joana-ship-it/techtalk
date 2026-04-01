@@ -1,6 +1,50 @@
 import { useState } from 'react';
 import { COLORS } from '../data/tagConfig';
 
+function EditableLinkField({ label, value, onChange, placeholder }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
+        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {editing ? (
+        <input
+          autoFocus
+          type="url"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onBlur={() => setEditing(false)}
+          onKeyDown={e => { if (e.key === 'Enter') setEditing(false); if (e.key === 'Escape') setEditing(false); }}
+          placeholder={placeholder}
+          className="w-full text-sm text-gray-700 border border-indigo-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        />
+      ) : value ? (
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors group">
+          <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:text-indigo-800 underline truncate flex-1" onClick={e => e.stopPropagation()}>
+            {value}
+          </a>
+          <button onClick={() => setEditing(true)} className="text-gray-300 hover:text-gray-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <div
+          onClick={() => setEditing(true)}
+          className="text-sm text-gray-400 italic border-dashed border border-gray-200 rounded-lg px-3 py-2 cursor-text hover:border-indigo-300 hover:bg-indigo-50/20 transition-colors"
+        >
+          {placeholder}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditableField({ label, value, onChange, placeholder }) {
   const [editing, setEditing] = useState(false);
   return (
@@ -78,7 +122,7 @@ function tagColor(list, label) {
   return COLORS[tag?.colorId] || COLORS.gray;
 }
 
-export default function EventDetailPanel({ event, onClose, brief, easterEgg, onUpdateBrief, onUpdateEasterEgg, onUpdateField, onDelete, tagConfig }) {
+export default function EventDetailPanel({ event, onClose, brief, easterEgg, presentation, onUpdateBrief, onUpdateEasterEgg, onUpdatePresentation, onUpdateField, onDelete, tagConfig }) {
   const [newSpeakerName, setNewSpeakerName] = useState('');
   const [newSpeakerStatus, setNewSpeakerStatus] = useState('Potential');
   const [addingNewSpeaker, setAddingNewSpeaker] = useState(false);
@@ -286,10 +330,11 @@ export default function EventDetailPanel({ event, onClose, brief, easterEgg, onU
             </div>
           </div>
 
-          {/* Brief + Easter egg */}
+          {/* Brief + Easter egg + Presentation */}
           <div className="border-t border-gray-100 pt-4 space-y-4">
             <EditableField label="Brief" value={brief} onChange={onUpdateBrief} placeholder="Click to add a brief..." />
             <EditableField label="Easter egg" value={easterEgg} onChange={onUpdateEasterEgg} placeholder="Click to add an easter egg..." />
+            <EditableLinkField label="Presentation" value={presentation} onChange={onUpdatePresentation} placeholder="Click to add presentation link..." />
           </div>
         </div>
 
