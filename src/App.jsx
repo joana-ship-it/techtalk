@@ -82,19 +82,22 @@ export default function App() {
   useEffect(() => {
     if (!dbLoaded) return;
     localStorage.setItem('techtalk-events', JSON.stringify(localEvents));
-    supabase.from('app_state').upsert({ key: 'events', value: localEvents });
+    supabase.from('app_state').upsert({ key: 'events', value: localEvents })
+      .then(({ error }) => { if (error) console.error('Supabase save events error:', error); });
   }, [localEvents, dbLoaded]);
 
   useEffect(() => {
     if (!dbLoaded) return;
     localStorage.setItem('techtalk-eventData', JSON.stringify(eventData));
-    supabase.from('app_state').upsert({ key: 'eventData', value: eventData });
+    supabase.from('app_state').upsert({ key: 'eventData', value: eventData })
+      .then(({ error }) => { if (error) console.error('Supabase save eventData error:', error); });
   }, [eventData, dbLoaded]);
 
   useEffect(() => {
     if (!dbLoaded) return;
     localStorage.setItem('techtalk-tagConfig-v5', JSON.stringify(tagConfig));
-    supabase.from('app_state').upsert({ key: 'tagConfig', value: tagConfig });
+    supabase.from('app_state').upsert({ key: 'tagConfig', value: tagConfig })
+      .then(({ error }) => { if (error) console.error('Supabase save tagConfig error:', error); });
   }, [tagConfig, dbLoaded]);
 
   const updateEventField = (id, field, value) =>
