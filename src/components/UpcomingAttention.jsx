@@ -33,21 +33,41 @@ function speakerNote(event) {
 
 function EditableBrief({ value, onChange }) {
   const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  function save() {
+    if (!draft.trim()) return;
+    onChange(draft.trim());
+    setEditing(false);
+  }
+
   return (
     <div onClick={e => e.stopPropagation()}>
       {editing ? (
-        <textarea
-          autoFocus
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-          placeholder="Write the brief..."
-          rows={2}
-          className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-black bg-white"
-        />
+        <div className="space-y-1.5">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
+            placeholder="Paste or write the brief..."
+            rows={3}
+            className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-black bg-white"
+          />
+          <div className="flex gap-1.5">
+            <button
+              onClick={save}
+              className="text-[10px] font-semibold bg-gray-900 text-white px-3 py-1 rounded-lg hover:bg-black transition-colors"
+            >Save brief</button>
+            <button
+              onClick={() => setEditing(false)}
+              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-1"
+            >Cancel</button>
+          </div>
+        </div>
       ) : (
         <div
-          onClick={() => setEditing(true)}
+          onClick={() => { setDraft(''); setEditing(true); }}
           className={`text-xs rounded-lg px-2.5 py-1.5 cursor-text min-h-[32px] border transition-colors ${
             value
               ? 'border-gray-200 text-gray-700 bg-white hover:border-gray-300'

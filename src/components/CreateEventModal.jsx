@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+const DEFAULT_SPEAKERS = ['Joana Rocha', 'Roxanne Taku', 'Helena Rattova'];
+const SPEAKER_STATUSES = ['Confirmed', 'Pending', 'Potential', 'Unknown'];
+
 export default function CreateEventModal({ date, tagConfig, onSave, onClose }) {
   const eventFormats = tagConfig?.eventFormats || [];
   const audienceTypes = tagConfig?.audienceTypes || [];
@@ -19,7 +22,28 @@ export default function CreateEventModal({ date, tagConfig, onSave, onClose }) {
     speakers: [],
   });
 
+  const [customSpeaker, setCustomSpeaker] = useState('');
+
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }));
+
+  function addSpeaker(name) {
+    if (form.speakers.find(s => s.name === name)) return;
+    set('speakers', [...form.speakers, { name, status: 'Potential', bio: '' }]);
+  }
+
+  function removeSpeaker(idx) {
+    set('speakers', form.speakers.filter((_, i) => i !== idx));
+  }
+
+  function updateSpeakerStatus(idx, status) {
+    set('speakers', form.speakers.map((s, i) => i === idx ? { ...s, status } : s));
+  }
+
+  function addCustomSpeaker() {
+    if (!customSpeaker.trim()) return;
+    addSpeaker(customSpeaker.trim());
+    setCustomSpeaker('');
+  }
 
   function submit(e) {
     e.preventDefault();
@@ -122,6 +146,59 @@ export default function CreateEventModal({ date, tagConfig, onSave, onClose }) {
                 >
                   {owners.map(t => <option key={t.label}>{t.label}</option>)}
                 </select>
+              </div>
+            </div>
+
+            {/* Speakers */}
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">Speakers</label>
+
+              {/* Added speakers */}
+              {form.speakers.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {form.speakers.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
+                      <span className="text-sm text-gray-800 flex-1">{s.name}</span>
+                      <select
+                        value={s.status}
+                        onChange={e => updateSpeakerStatus(i, e.target.value)}
+                        className="text-xs border border-gray-200 rounded-full px-2 py-0.5 focus:outline-none bg-white"
+                      >
+                        {SPEAKER_STATUSES.map(st => <option key={st}>{st}</option>)}
+                      </select>
+                      <button type="button" onClick={() => removeSpeaker(i)} className="text-gray-300 hover:text-red-400 text-lg leading-none">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Default speaker quick-add */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {DEFAULT_SPEAKERS.filter(n => !form.speakers.find(s => s.name === n)).map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => addSpeaker(name)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-dashed border-gray-300 text-gray-500 hover:border-gray-500 hover:text-gray-800 transition-colors"
+                  >+ {name}</button>
+                ))}
+              </div>
+
+              {/* Custom speaker input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customSpeaker}
+                  onChange={e => setCustomSpeaker(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSpeaker(); } }}
+                  placeholder="Add other speaker..."
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomSpeaker}
+                  className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 transition-colors"
+                >Add</button>
               </div>
             </div>
 

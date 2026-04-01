@@ -78,6 +78,17 @@ export default function App() {
     loadFromDB();
   }, []);
 
+  // Auto-mark past events as Done
+  useEffect(() => {
+    if (!dbLoaded) return;
+    const today = new Date().toISOString().split('T')[0];
+    setLocalEvents(prev => {
+      const hasChanges = prev.some(e => e.date < today && e.status !== 'Done');
+      if (!hasChanges) return prev;
+      return prev.map(e => e.date < today && e.status !== 'Done' ? { ...e, status: 'Done' } : e);
+    });
+  }, [dbLoaded]);
+
   // Sync to Supabase + localStorage whenever state changes (only after initial load)
   useEffect(() => {
     if (!dbLoaded) return;
