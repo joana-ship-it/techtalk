@@ -4,6 +4,7 @@ import { DEFAULT_TAG_CONFIG } from './data/tagConfig';
 import CalendarView from './components/CalendarView';
 import ActionNeededView from './components/ActionNeededView';
 import SpeakerCRM from './components/SpeakerCRM';
+import { supabase } from './lib/supabase';
 import './index.css';
 
 function loadStorage(key, fallback) {
@@ -50,6 +51,7 @@ const NAV = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('action-needed');
+  const [dbLoaded, setDbLoaded] = useState(false);
 
   const [localEvents, setLocalEvents] = useState(() =>
     loadStorage('techtalk-events', EVENTS.map(e => ({ ...e })))
@@ -61,9 +63,39 @@ export default function App() {
     loadStorage('techtalk-tagConfig-v5', DEFAULT_TAG_CONFIG)
   );
 
-  useEffect(() => { localStorage.setItem('techtalk-events', JSON.stringify(localEvents)); }, [localEvents]);
-  useEffect(() => { localStorage.setItem('techtalk-eventData', JSON.stringify(eventData)); }, [eventData]);
-  useEffect(() => { localStorage.setItem('techtalk-tagConfig-v5', JSON.stringify(tagConfig)); }, [tagConfig]);
+  // Load from Supabase on mount — overrides localStorage with synced data
+  useEffect(() => {
+    async function loadFromDB() {
+      const { data } = await supabase.from('app_state').select('*');
+      if (data && data.length > 0) {
+        const state = Object.fromEntries(data.map(r => [r.key, r.value]));
+        if (state.events) setLocalEvents(state.events);
+        if (state.eventData) setEventData(state.eventData);
+        if (state.tagConfig) setTagConfig(state.tagConfig);
+      }
+      setDbLoaded(true);
+    }
+    loadFromDB();
+  }, []);
+
+  // Sync to Supabase + localStorage whenever state changes (only after initial load)
+  useEffect(() => {
+    if (!dbLoaded) return;
+    localStorage.setItem('techtalk-events', JSON.stringify(localEvents));
+    supabase.from('app_state').upsert({ key: 'events', value: localEvents });
+  }, [localEvents, dbLoaded]);
+
+  useEffect(() => {
+    if (!dbLoaded) return;
+    localStorage.setItem('techtalk-eventData', JSON.stringify(eventData));
+    supabase.from('app_state').upsert({ key: 'eventData', value: eventData });
+  }, [eventData, dbLoaded]);
+
+  useEffect(() => {
+    if (!dbLoaded) return;
+    localStorage.setItem('techtalk-tagConfig-v5', JSON.stringify(tagConfig));
+    supabase.from('app_state').upsert({ key: 'tagConfig', value: tagConfig });
+  }, [tagConfig, dbLoaded]);
 
   const updateEventField = (id, field, value) =>
     setLocalEvents(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
