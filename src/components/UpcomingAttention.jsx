@@ -1,174 +1,279 @@
 import { useState } from 'react';
 import { COLORS } from '../data/tagConfig';
 
-function tagColor(tagConfig, label) {
-  const tag = tagConfig?.eventFormats?.find(t => t.label === label);
-  return COLORS[tag?.colorId] || COLORS.gray;
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+
+function daysDiff(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return Math.round((d - TODAY) / (1000 * 60 * 60 * 24));
 }
 
-const TODAY = new Date('2026-04-01T00:00:00');
-const FOUR_WEEKS = 28 * 24 * 60 * 60 * 1000;
-const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
+function shiftDate(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function deadlineLabel(days) {
+  if (days < -1) return `${Math.abs(days)} days overdue`;
+  if (days === -1) return '1 day overdue';
+  if (days === 0) return 'Due today';
+  if (days === 1) return 'Due tomorrow';
+  return `Due in ${days} days`;
+}
+
 const SPEAKER_STATUSES = ['Confirmed', 'Pending', 'Potential', 'Unknown'];
 
-function hasConfirmedSpeaker(event) {
-  return event.speakers?.some(s => s.status === 'Confirmed');
-}
+const TASK_META = {
+  speaker: {
+    label: 'Confirm Speaker',
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+    tagClass: 'bg-violet-100 text-violet-700 border-violet-200',
+  },
+  brief: {
+    label: 'Upload Brief',
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+    tagClass: 'bg-sky-100 text-sky-700 border-sky-200',
+  },
+  presentation: {
+    label: 'Add Presentation',
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    tagClass: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  },
+};
 
-function daysUntil(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const diff = Math.round((d - TODAY) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Tomorrow';
-  return `${diff}d`;
-}
-
-function speakerNote(event) {
-  if (!event.speakers || event.speakers.length === 0) return 'No speaker yet';
-  const statuses = event.speakers.map(s => s.status);
-  if (statuses.every(s => s === 'Potential')) return 'Potential only';
-  if (statuses.includes('Pending')) return 'Pending';
-  return 'Unconfirmed';
-}
-
-function EditableBrief({ value, onChange }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-
-  function save() {
-    if (!draft.trim()) return;
-    onChange(draft.trim());
-    setEditing(false);
-  }
-
-  return (
-    <div onClick={e => e.stopPropagation()}>
-      {editing ? (
-        <div className="space-y-1.5">
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
-            placeholder="Paste or write the brief..."
-            rows={3}
-            className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-black bg-white"
-          />
-          <div className="flex gap-1.5">
-            <button
-              onClick={save}
-              className="text-[10px] font-semibold bg-gray-900 text-white px-3 py-1 rounded-lg hover:bg-black transition-colors"
-            >Save brief</button>
-            <button
-              onClick={() => setEditing(false)}
-              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-1"
-            >Cancel</button>
-          </div>
-        </div>
-      ) : (
-        <div
-          onClick={() => { setDraft(''); setEditing(true); }}
-          className={`text-xs rounded-lg px-2.5 py-1.5 cursor-text min-h-[32px] border transition-colors ${
-            value
-              ? 'border-gray-200 text-gray-700 bg-white hover:border-gray-300'
-              : 'border-dashed border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-500'
-          }`}
-        >
-          {value || '+ Add brief'}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CompactSpeakerEditor({ event, onUpdateField }) {
-  const [adding, setAdding] = useState(false);
+function SpeakerInput({ event, updateEventField }) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState('Potential');
-  const [editingNameIdx, setEditingNameIdx] = useState(null);
   const speakers = event.speakers || [];
-
-  function updateStatus(idx, newStatus) {
-    onUpdateField(event.id, 'speakers', speakers.map((s, i) => i === idx ? { ...s, status: newStatus } : s));
-  }
-
-  function updateName(idx, newName) {
-    onUpdateField(event.id, 'speakers', speakers.map((s, i) => i === idx ? { ...s, name: newName } : s));
-    setEditingNameIdx(null);
-  }
-
-  function removeSpeaker(idx) {
-    onUpdateField(event.id, 'speakers', speakers.filter((_, i) => i !== idx));
-  }
 
   function addSpeaker() {
     if (!name.trim()) return;
-    onUpdateField(event.id, 'speakers', [...speakers, { name: name.trim(), status, bio: '' }]);
-    setName(''); setStatus('Potential'); setAdding(false);
+    updateEventField(event.id, 'speakers', [...speakers, { name: name.trim(), status, bio: '' }]);
+    setName('');
+    setStatus('Potential');
+  }
+
+  function removeSpkr(idx) {
+    updateEventField(event.id, 'speakers', speakers.filter((_, i) => i !== idx));
+  }
+
+  function updateStatus(idx, newStatus) {
+    updateEventField(event.id, 'speakers', speakers.map((s, i) => i === idx ? { ...s, status: newStatus } : s));
   }
 
   return (
-    <div onClick={e => e.stopPropagation()} className="space-y-1.5">
-      {speakers.length === 0 && !adding && (
-        <div className="text-xs text-gray-400">No speaker assigned</div>
-      )}
+    <div className="space-y-2 pt-2" onClick={e => e.stopPropagation()}>
       {speakers.map((s, i) => (
-        <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-1.5 border border-gray-100">
-          {editingNameIdx === i ? (
-            <input
-              autoFocus
-              type="text"
-              defaultValue={s.name}
-              onBlur={ev => updateName(i, ev.target.value || s.name)}
-              onKeyDown={ev => { if (ev.key === 'Enter') updateName(i, ev.target.value || s.name); if (ev.key === 'Escape') setEditingNameIdx(null); }}
-              className="text-xs flex-1 border-b border-gray-300 focus:outline-none bg-transparent"
-            />
-          ) : (
-            <span
-              className="text-xs font-medium text-gray-800 flex-1 truncate cursor-pointer hover:text-black"
-              onClick={() => setEditingNameIdx(i)}
-            >{s.name}</span>
-          )}
+        <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+          <span className="text-sm flex-1 text-gray-800 font-medium">{s.name}</span>
           <select
             value={s.status || 'Unknown'}
             onChange={e => updateStatus(i, e.target.value)}
-            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold border focus:outline-none cursor-pointer flex-shrink-0 ${
-              s.status === 'Confirmed' ? 'bg-lime-100 text-lime-800 border-lime-200' :
+            className={`text-[10px] font-semibold rounded-full px-2 py-0.5 border focus:outline-none cursor-pointer ${
+              s.status === 'Confirmed' ? 'bg-green-100 text-green-800 border-green-200' :
               s.status === 'Pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
               'bg-gray-100 text-gray-500 border-gray-200'
             }`}
           >
             {SPEAKER_STATUSES.map(st => <option key={st}>{st}</option>)}
           </select>
-          <button
-            onClick={() => removeSpeaker(i)}
-            className="text-gray-300 hover:text-red-400 text-sm leading-none flex-shrink-0 transition-colors"
-            title="Remove speaker"
-          >×</button>
+          <button onClick={() => removeSpkr(i)} className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors">×</button>
         </div>
       ))}
-      {adding ? (
-        <div className="flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 border border-gray-200">
-          <input
-            autoFocus type="text" value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') addSpeaker(); if (e.key === 'Escape') setAdding(false); }}
-            placeholder="Speaker name..."
-            className="text-xs flex-1 focus:outline-none bg-transparent"
-          />
-          <select value={status} onChange={e => setStatus(e.target.value)}
-            className="text-[10px] border border-gray-200 rounded px-1 py-0.5 focus:outline-none">
-            {SPEAKER_STATUSES.map(st => <option key={st}>{st}</option>)}
-          </select>
-          <button onClick={addSpeaker} className="text-[10px] font-bold text-black hover:text-gray-600">Add</button>
-          <button onClick={() => setAdding(false)} className="text-gray-400 hover:text-gray-600 text-sm leading-none">×</button>
-        </div>
-      ) : (
-        <button onClick={() => setAdding(true)}
-          className="text-xs text-gray-400 hover:text-black border border-dashed border-gray-200 hover:border-gray-400 rounded-lg px-2.5 py-1 transition-colors w-full">
-          + Add speaker
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') addSpeaker(); }}
+          placeholder="Speaker name..."
+          className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-200"
+        />
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
+          className="text-xs border border-gray-200 rounded-lg px-2 focus:outline-none bg-white"
+        >
+          {SPEAKER_STATUSES.map(st => <option key={st}>{st}</option>)}
+        </select>
+        <button
+          onClick={addSpeaker}
+          className="text-sm px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium"
+        >Add</button>
+      </div>
+    </div>
+  );
+}
+
+function BriefInput({ eventId, onUpdateEventData }) {
+  const [draft, setDraft] = useState('');
+
+  function save() {
+    if (!draft.trim()) return;
+    onUpdateEventData(eventId, 'brief', draft.trim());
+  }
+
+  return (
+    <div className="space-y-2 pt-2" onClick={e => e.stopPropagation()}>
+      <textarea
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        placeholder="Paste or write the brief..."
+        rows={3}
+        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-sky-200"
+      />
+      <button
+        onClick={save}
+        disabled={!draft.trim()}
+        className="text-xs font-semibold bg-gray-900 text-white px-4 py-1.5 rounded-lg hover:bg-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >Save brief</button>
+    </div>
+  );
+}
+
+function PresentationInput({ eventId, onUpdateEventData }) {
+  const [url, setUrl] = useState('');
+
+  function save() {
+    if (!url.trim()) return;
+    onUpdateEventData(eventId, 'presentation', url.trim());
+  }
+
+  return (
+    <div className="flex gap-2 pt-2" onClick={e => e.stopPropagation()}>
+      <input
+        type="url"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') save(); }}
+        placeholder="Paste presentation link..."
+        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+      />
+      <button
+        onClick={save}
+        className="text-sm font-medium px-4 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors"
+      >Save</button>
+    </div>
+  );
+}
+
+function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
+  const isOverdue = task.daysUntilDeadline < 0;
+  const isUrgent = !isOverdue && task.daysUntilDeadline <= 3;
+  const [open, setOpen] = useState(isOverdue || task.daysUntilDeadline <= 2);
+  const meta = TASK_META[task.type];
+  const { event } = task;
+
+  return (
+    <div className={`rounded-xl border bg-white overflow-hidden ${
+      isOverdue ? 'border-red-200 shadow-sm shadow-red-50' :
+      isUrgent ? 'border-amber-200 shadow-sm shadow-amber-50' :
+      'border-gray-100'
+    }`}>
+      <div
+        className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none ${open ? 'border-b border-gray-100' : ''}`}
+        onClick={() => setOpen(!open)}
+      >
+        {/* Status dot */}
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+          isOverdue ? 'bg-red-500' : isUrgent ? 'bg-amber-400' : 'bg-gray-300'
+        }`} />
+
+        {/* Task type badge */}
+        <span className={`hidden sm:flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${meta.tagClass}`}>
+          {meta.icon}
+          {meta.label}
+        </span>
+
+        {/* Event name — clickable to open event card */}
+        <button
+          onClick={ev => { ev.stopPropagation(); onSelectEvent(event); }}
+          className="text-sm font-semibold text-gray-800 hover:text-black truncate flex-1 text-left hover:underline underline-offset-2"
+          title="Open event"
+        >
+          {event.title || event.event}
         </button>
+
+        {/* Event type + date */}
+        <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0 hidden md:block">
+          {event.event} · {formatDate(event.date)}
+        </span>
+
+        {/* Deadline badge */}
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap ${
+          isOverdue ? 'bg-red-100 text-red-600' :
+          isUrgent ? 'bg-amber-100 text-amber-700' :
+          'bg-gray-100 text-gray-500'
+        }`}>
+          {deadlineLabel(task.daysUntilDeadline)}
+        </span>
+
+        {/* Chevron */}
+        <svg
+          className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+
+      {/* Expanded input area */}
+      {open && (
+        <div className="px-4 pb-4 bg-gray-50/50">
+          {task.type === 'speaker' && (
+            <SpeakerInput event={event} updateEventField={updateEventField} />
+          )}
+          {task.type === 'brief' && (
+            <BriefInput eventId={event.id} onUpdateEventData={onUpdateEventData} />
+          )}
+          {task.type === 'presentation' && (
+            <PresentationInput eventId={event.id} onUpdateEventData={onUpdateEventData} />
+          )}
+        </div>
       )}
+    </div>
+  );
+}
+
+function Section({ title, tasks, dotColor, updateEventField, onUpdateEventData, onSelectEvent }) {
+  if (tasks.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor}`} />
+        <span className="text-xs font-bold text-gray-700 uppercase tracking-widest">{title}</span>
+        <span className="text-xs text-gray-400 font-medium">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</span>
+        <div className="flex-1 h-px bg-gray-100" />
+      </div>
+      <div className="space-y-2">
+        {tasks.map(t => (
+          <TaskRow
+            key={`${t.event.id}-${t.type}`}
+            task={t}
+            updateEventField={updateEventField}
+            onUpdateEventData={onUpdateEventData}
+            onSelectEvent={onSelectEvent}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -176,25 +281,53 @@ function CompactSpeakerEditor({ event, onUpdateField }) {
 export default function UpcomingAttention({ onSelectEvent, eventData, onUpdateEventData, localEvents, updateEventField, fullPage, tagConfig }) {
   if (!localEvents) return null;
 
-  const actionMap = new Map();
+  // Build task list
+  const allTasks = [];
 
   localEvents.forEach(e => {
     if (e.event !== 'Webinar' && e.event !== 'Workshop') return;
-    const d = new Date(e.date + 'T00:00:00');
-    if (d < TODAY || d > new Date(TODAY.getTime() + FOUR_WEEKS)) return;
-    if (hasConfirmedSpeaker(e)) return;
-    actionMap.set(e.id, { ...actionMap.get(e.id), needsSpeaker: true });
+    if (daysDiff(e.date) < 0) return; // skip past events
+
+    const eData = eventData?.[e.id] || {};
+    const hasConfirmedSpeaker = e.speakers?.some(s => s.status === 'Confirmed');
+    const hasBrief = !!eData.brief;
+    const hasPresentation = !!eData.presentation;
+
+    if (e.event === 'Webinar') {
+      if (!hasConfirmedSpeaker) {
+        const deadline = shiftDate(e.date, -30);
+        allTasks.push({ type: 'speaker', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+      if (!hasBrief) {
+        const deadline = shiftDate(e.date, -11);
+        allTasks.push({ type: 'brief', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+      if (!hasPresentation) {
+        const deadline = shiftDate(e.date, -2);
+        allTasks.push({ type: 'presentation', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+    }
+
+    if (e.event === 'Workshop') {
+      if (!hasConfirmedSpeaker) {
+        const deadline = shiftDate(e.date, -28);
+        allTasks.push({ type: 'speaker', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+      if (!hasPresentation) {
+        const deadline = shiftDate(e.date, -2);
+        allTasks.push({ type: 'presentation', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+    }
   });
 
-  localEvents.forEach(e => {
-    if (e.event !== 'Webinar') return;
-    const d = new Date(e.date + 'T00:00:00');
-    if (d < TODAY || d > new Date(TODAY.getTime() + TWO_WEEKS)) return;
-    if (eventData?.[e.id]?.brief) return;
-    actionMap.set(e.id, { ...actionMap.get(e.id), needsBrief: true });
-  });
+  // Sort by urgency (most overdue first)
+  allTasks.sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
 
-  if (actionMap.size === 0) {
+  const overdue = allTasks.filter(t => t.daysUntilDeadline < 0);
+  const thisWeek = allTasks.filter(t => t.daysUntilDeadline >= 0 && t.daysUntilDeadline <= 7);
+  const upcoming = allTasks.filter(t => t.daysUntilDeadline > 7);
+
+  if (allTasks.length === 0) {
     if (!fullPage) return null;
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center">
@@ -204,18 +337,16 @@ export default function UpcomingAttention({ onSelectEvent, eventData, onUpdateEv
           </svg>
         </div>
         <p className="text-gray-900 font-semibold text-lg">All clear!</p>
-        <p className="text-sm text-gray-400 mt-1">No events need attention right now.</p>
+        <p className="text-sm text-gray-400 mt-1">No tasks need attention right now.</p>
       </div>
     );
   }
 
-  const attentionEvents = localEvents
-    .filter(e => actionMap.has(e.id))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const sharedProps = { updateEventField, onUpdateEventData, onSelectEvent };
 
   return (
     <div className={fullPage ? '' : 'px-6 pt-5 pb-3'}>
-      {/* Section header — only shown when embedded in CalendarView */}
+      {/* Embedded header */}
       {!fullPage && (
         <div className="flex items-center gap-3 mb-3">
           <div className="flex items-center gap-2">
@@ -223,97 +354,38 @@ export default function UpcomingAttention({ onSelectEvent, eventData, onUpdateEv
             <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Action needed</span>
           </div>
           <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-xs text-gray-400">{attentionEvents.length} event{attentionEvents.length !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-gray-400">{allTasks.length} task{allTasks.length !== 1 ? 's' : ''}</span>
         </div>
       )}
 
-      {fullPage && (
-        <p className="text-xs text-gray-400 mb-4">{attentionEvents.length} event{attentionEvents.length !== 1 ? 's' : ''} need attention</p>
+      {/* Full-page summary pills */}
+      {fullPage && allTasks.length > 0 && (
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          {overdue.length > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+              {overdue.length} overdue
+            </span>
+          )}
+          {thisWeek.length > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+              {thisWeek.length} due this week
+            </span>
+          )}
+          {upcoming.length > 0 && (
+            <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
+              {upcoming.length} upcoming
+            </span>
+          )}
+        </div>
       )}
 
-      {/* Cards row */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
-        {attentionEvents.map(e => {
-          const actions = actionMap.get(e.id);
-          const countdown = daysUntil(e.date);
-          const isUrgent = countdown === 'Today' || countdown === 'Tomorrow' || parseInt(countdown) <= 7;
-
-          return (
-            <div
-              key={e.id}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-            >
-              {/* Card top bar — color coded by urgency */}
-              <div className={`h-1 w-full ${isUrgent ? 'bg-amber-400' : 'bg-gray-200'}`} />
-
-              <div className="p-4">
-                {/* Header row */}
-                <button className="w-full text-left group" onClick={() => onSelectEvent(e)}>
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        {(() => { const c = tagColor(tagConfig, e.event); return (
-                          <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-                            {e.event}
-                          </span>
-                        ); })()}
-                        <span className="text-[10px] text-gray-400">
-                          {new Date(e.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                        </span>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-black">
-                        {e.title || <span className="italic text-gray-400">Untitled</span>}
-                      </p>
-                    </div>
-                    {/* Countdown badge */}
-                    <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                      countdown === 'Today' ? 'bg-red-500 text-white' :
-                      countdown === 'Tomorrow' ? 'bg-orange-400 text-white' :
-                      isUrgent ? 'bg-amber-400 text-white' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {countdown === 'Today' || countdown === 'Tomorrow' ? countdown : countdown}
-                    </span>
-                  </div>
-                </button>
-
-                {/* Action tags */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {actions.needsSpeaker && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full text-gray-900" style={{ backgroundColor: '#e7abff' }}>
-                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Confirm speaker
-                      <span className="opacity-60 font-normal">· {speakerNote(e)}</span>
-                    </span>
-                  )}
-                  {actions.needsBrief && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-lime-300 text-gray-900">
-                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Upload brief
-                    </span>
-                  )}
-                </div>
-
-                {/* Editable fields */}
-                <div className="space-y-2.5">
-                  {actions.needsSpeaker && (
-                    <CompactSpeakerEditor event={e} onUpdateField={updateEventField} />
-                  )}
-                  {actions.needsBrief && (
-                    <EditableBrief
-                      value={eventData?.[e.id]?.brief ?? ''}
-                      onChange={v => onUpdateEventData(e.id, 'brief', v)}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="space-y-6">
+        <Section title="Overdue" tasks={overdue} dotColor="bg-red-500" {...sharedProps} />
+        <Section title="Due this week" tasks={thisWeek} dotColor="bg-amber-400" {...sharedProps} />
+        <Section title="Upcoming" tasks={upcoming} dotColor="bg-gray-300" {...sharedProps} />
       </div>
     </div>
   );
