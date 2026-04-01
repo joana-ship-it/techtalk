@@ -51,6 +51,8 @@ const NAV = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('action-needed');
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [activeTab]);
   const [dbLoaded, setDbLoaded] = useState(false);
 
   const [localEvents, setLocalEvents] = useState(() =>
