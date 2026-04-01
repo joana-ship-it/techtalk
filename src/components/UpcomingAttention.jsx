@@ -178,7 +178,7 @@ function PresentationInput({ eventId, onUpdateEventData }) {
 function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
   const isOverdue = task.daysUntilDeadline < 0;
   const isUrgent = !isOverdue && task.daysUntilDeadline <= 3;
-  const [open, setOpen] = useState(isOverdue || task.daysUntilDeadline <= 2);
+  const [open, setOpen] = useState(false);
   const meta = TASK_META[task.type];
   const { event } = task;
 
