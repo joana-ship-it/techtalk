@@ -215,6 +215,7 @@ function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
   const [open, setOpen] = useState(false);
   const meta = TASK_META[task.type];
   const { event } = task;
+  const isMarkDoneType = task.type === 'callBooked' || task.type === 'contentReceived';
 
   return (
     <div className={`rounded-xl border bg-white overflow-hidden ${
@@ -223,8 +224,8 @@ function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
       'border-gray-100'
     }`}>
       <div
-        className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none ${open ? 'border-b border-gray-100' : ''}`}
-        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-3 px-4 py-3 ${isMarkDoneType ? '' : 'cursor-pointer select-none'} ${open ? 'border-b border-gray-100' : ''}`}
+        onClick={() => { if (!isMarkDoneType) setOpen(!open); }}
       >
         {/* Status dot */}
         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -260,26 +261,32 @@ function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
           {deadlineLabel(task.daysUntilDeadline)}
         </span>
 
-        {/* Chevron */}
-        <svg
-          className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        {/* Mark as done button (inline) or chevron */}
+        {isMarkDoneType ? (
+          <button
+            onClick={e => { e.stopPropagation(); onUpdateEventData(event.id, task.type, true); }}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-black transition-colors flex-shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M5 13l4 4L19 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Done
+          </button>
+        ) : (
+          <svg
+            className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </div>
 
       {/* Expanded input area */}
-      {open && (
+      {open && !isMarkDoneType && (
         <div className="px-4 pb-4 bg-gray-50/50">
           {task.type === 'speaker' && (
             <SpeakerInput event={event} updateEventField={updateEventField} />
-          )}
-          {task.type === 'callBooked' && (
-            <MarkDoneInput eventId={event.id} field="callBooked" onUpdateEventData={onUpdateEventData} />
-          )}
-          {task.type === 'contentReceived' && (
-            <MarkDoneInput eventId={event.id} field="contentReceived" onUpdateEventData={onUpdateEventData} />
           )}
           {task.type === 'brief' && (
             <BriefInput eventId={event.id} onUpdateEventData={onUpdateEventData} />
