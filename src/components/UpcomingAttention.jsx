@@ -39,6 +39,24 @@ const TASK_META = {
     ),
     tagClass: 'bg-violet-100 text-violet-700 border-violet-200',
   },
+  callBooked: {
+    label: 'Book Speaker Call',
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    tagClass: 'bg-teal-100 text-teal-700 border-teal-200',
+  },
+  contentReceived: {
+    label: 'Get Speaker Content',
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    tagClass: 'bg-orange-100 text-orange-700 border-orange-200',
+  },
   brief: {
     label: 'Upload Brief',
     icon: (
@@ -58,6 +76,22 @@ const TASK_META = {
     tagClass: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   },
 };
+
+function MarkDoneInput({ eventId, field, onUpdateEventData }) {
+  return (
+    <div className="pt-2" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => onUpdateEventData(eventId, field, true)}
+        className="flex items-center gap-2 text-sm font-semibold bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M5 13l4 4L19 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Mark as done
+      </button>
+    </div>
+  );
+}
 
 function SpeakerInput({ event, updateEventField }) {
   const [name, setName] = useState('');
@@ -241,6 +275,12 @@ function TaskRow({ task, updateEventField, onUpdateEventData, onSelectEvent }) {
           {task.type === 'speaker' && (
             <SpeakerInput event={event} updateEventField={updateEventField} />
           )}
+          {task.type === 'callBooked' && (
+            <MarkDoneInput eventId={event.id} field="callBooked" onUpdateEventData={onUpdateEventData} />
+          )}
+          {task.type === 'contentReceived' && (
+            <MarkDoneInput eventId={event.id} field="contentReceived" onUpdateEventData={onUpdateEventData} />
+          )}
           {task.type === 'brief' && (
             <BriefInput eventId={event.id} onUpdateEventData={onUpdateEventData} />
           )}
@@ -292,15 +332,25 @@ export default function UpcomingAttention({ onSelectEvent, eventData, onUpdateEv
     const hasConfirmedSpeaker = e.speakers?.some(s => s.status === 'Confirmed');
     const hasBrief = !!eData.brief;
     const hasPresentation = !!eData.presentation;
+    const callBooked = !!eData.callBooked;
+    const contentReceived = !!eData.contentReceived;
 
     if (e.event === 'Webinar') {
       if (!hasConfirmedSpeaker) {
         const deadline = shiftDate(e.date, -30);
         allTasks.push({ type: 'speaker', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
       }
+      if (!callBooked) {
+        const deadline = shiftDate(e.date, -14);
+        allTasks.push({ type: 'callBooked', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
       if (!hasBrief) {
         const deadline = shiftDate(e.date, -11);
         allTasks.push({ type: 'brief', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
+      }
+      if (!contentReceived) {
+        const deadline = shiftDate(e.date, -5);
+        allTasks.push({ type: 'contentReceived', deadline, event: e, daysUntilDeadline: daysDiff(deadline) });
       }
       if (!hasPresentation) {
         const deadline = shiftDate(e.date, -2);
